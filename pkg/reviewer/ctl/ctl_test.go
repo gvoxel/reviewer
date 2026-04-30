@@ -142,6 +142,112 @@ func TestController_Review(t *testing.T) {
 	assert.True(t, uploadedReview, "review was not uploaded")
 }
 
+// fakeRunner returns a fixed RunResult — used to exercise Controller paths
+// that depend on the runner output without involving fixture files.
+type fakeRunner struct {
+	result *RunResult
+}
+
+func (r *fakeRunner) Run(_ context.Context, _ string) (*RunResult, error) {
+	return r.result, nil
+}
+
+func TestController_Review_DurationFallbackWhenRunnerReportsZero(t *testing.T) {
+	var capturedReviewBody []byte
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/v1/prompt/") && r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("prompt"))
+			return
+		}
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		if len(parts) == 3 && r.Method == http.MethodPost {
+			capturedReviewBody, _ = io.ReadAll(r.Body)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("99"))
+			return
+		}
+		if len(parts) == 5 && r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	tmpDir := setupTestDir(t)
+	cfg := &Config{
+		Key:   "test-key",
+		URL:   srv.URL,
+		Model: "gpt-5.4",
+		Dir:   tmpDir,
+	}
+
+	// Runner reports DurationMs=0 — Controller must fall back to wall-clock.
+	runner := &fakeRunner{result: &RunResult{Type: "result", Subtype: "success"}}
+	c := NewController(cfg, runner, slog.Default())
+
+	err := c.Review(context.Background())
+	require.NoError(t, err)
+	require.NotNil(t, capturedReviewBody)
+
+	var draft struct {
+		Review struct {
+			DurationMs int `json:"durationMs"`
+		} `json:"review"`
+	}
+	require.NoError(t, json.Unmarshal(capturedReviewBody, &draft))
+	assert.Greater(t, draft.Review.DurationMs, 0,
+		"durationMs must be filled by Controller when runner reports 0")
+}
+
+func TestController_Review_DurationKeptWhenRunnerReportsNonZero(t *testing.T) {
+	var capturedReviewBody []byte
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/v1/prompt/") && r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("prompt"))
+			return
+		}
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		if len(parts) == 3 && r.Method == http.MethodPost {
+			capturedReviewBody, _ = io.ReadAll(r.Body)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("99"))
+			return
+		}
+		if len(parts) == 5 && r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	tmpDir := setupTestDir(t)
+	cfg := &Config{Key: "k", URL: srv.URL, Model: "opus", Dir: tmpDir}
+
+	const reportedMs = 12345
+	runner := &fakeRunner{result: &RunResult{Type: "result", Subtype: "success", DurationMs: reportedMs}}
+	c := NewController(cfg, runner, slog.Default())
+
+	require.NoError(t, c.Review(context.Background()))
+	require.NotNil(t, capturedReviewBody)
+
+	var draft struct {
+		Review struct {
+			DurationMs int `json:"durationMs"`
+		} `json:"review"`
+	}
+	require.NoError(t, json.Unmarshal(capturedReviewBody, &draft))
+	assert.Equal(t, reportedMs, draft.Review.DurationMs,
+		"runner-reported DurationMs must not be overwritten")
+}
+
 func TestController_Comment(t *testing.T) {
 	var commentPosted bool
 

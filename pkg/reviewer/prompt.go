@@ -135,16 +135,8 @@ review.json — структурированные данные по всем з
 
 Важно:
 - все ключи JSON в lowerCamelCase
-- review.durationMs, review.createdAt — замерь точное время:
-  1. В самом начале работы выполни ` + "`date +%s%3N`" + ` через Bash и сохрани результат как START_MS
-  2. Перед записью review.json выполни ` + "`date +%s%3N`" + ` ещё раз
-  3. durationMs = END_MS - START_MS
-  4. createdAt = текущее время в ISO 8601 (получи через ` + "`date -u +%Y-%m-%dT%H:%M:%SZ`" + `)
-- review.modelInfo — заполни так:
-  - model: точное имя модели из твоей сессии (например claude-opus-4-6, claude-sonnet-4-6)
-  - inputTokens: примерный текущий context usage в токенах
-  - outputTokens: оценочно, обычно 15-30% от inputTokens
-  - costUsd: рассчитай по формуле (inputTokens * inputPrice + outputTokens * outputPrice) / 1000000, цены за 1M токенов: opus — $5/$25, sonnet — $3/$15, haiku — $1/$5
+- review.createdAt — текущее время в ISO 8601 (получи через ` + "`date -u +%Y-%m-%dT%H:%M:%SZ`" + `)
+- review.durationMs и review.modelInfo заполняются на стороне reviewctl — в JSON оставь нули, они будут перезаписаны
 - review.externalId, review.commitHash — из контекста git и VCS
 - issues в JSON должны точно соответствовать замечаниям в MD-файлах
 - localId — уникальный идентификатор замечания (A1, C2, S1, T3, O1), должен совпадать с заголовком в MD файле, A/C/S/T/O определяются по типу ревью fileType

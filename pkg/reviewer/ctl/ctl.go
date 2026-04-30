@@ -49,10 +49,10 @@ func (c *Controller) Review(ctx context.Context) error {
 	}
 	prompt = SubstituteVariables(prompt, c.cfg)
 
-	// 2. Run Claude.
+	// 2. Run the AI provider.
 	result, err := c.runner.Run(ctx, prompt)
 	if err != nil {
-		return fmt.Errorf("run claude: %w", err)
+		return fmt.Errorf("run provider: %w", err)
 	}
 
 	// 3. Parse review.json.
@@ -61,7 +61,18 @@ func (c *Controller) Review(ctx context.Context) error {
 		return fmt.Errorf("read review: %w", err)
 	}
 
-	// 4. Merge cost data from Claude result.
+	// 4. Merge cost/duration from runner result.
+	// If the provider does not report duration in its output (e.g. Codex),
+	// fall back to wall-clock measurement around runner.Run. We floor at 1
+	// to keep "the run happened" semantics — a zero in storage is reserved
+	// for "unknown".
+	if result.DurationMs == 0 {
+		elapsed := int(time.Since(start).Milliseconds())
+		if elapsed < 1 {
+			elapsed = 1
+		}
+		result.DurationMs = elapsed
+	}
 	draft.Review.ModelInfo = result.ToModelInfo(c.cfg.Model)
 	draft.Review.DurationMs = result.DurationMs
 
