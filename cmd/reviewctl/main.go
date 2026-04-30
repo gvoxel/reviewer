@@ -24,7 +24,8 @@ func main() {
 	pf.StringVar(&cfg.Key, "key", os.Getenv("PROJECT_KEY"), "project key (UUID)")
 	pf.StringVar(&cfg.URL, "url", os.Getenv("REVIEWSRV_URL"), "reviewsrv server URL (used for API calls from CI)")
 	pf.StringVar(&cfg.PublicURL, "public-url", os.Getenv("REVIEWSRV_PUBLIC_URL"), "browser-facing base URL for links in MR comments (defaults to --url)")
-	pf.StringVar(&cfg.Model, "model", envDefault("REVIEW_MODEL", "opus"), "Claude model")
+	pf.StringVar(&cfg.Provider, "provider", envDefault("REVIEW_PROVIDER", "claude"), "AI provider: claude or codex")
+	pf.StringVar(&cfg.Model, "model", envDefault("REVIEW_MODEL", "opus"), "model id passed to the provider CLI")
 	pf.StringVar(&cfg.Dir, "dir", envDefault("REVIEW_DIR", "."), "working directory with review files")
 	pf.BoolVar(&cfg.Verbose, "verbose", os.Getenv("REVIEW_VERBOSE") == "true", "verbose output")
 	pf.StringVar(&cfg.GitLabURL, "gitlab-url", os.Getenv("CI_API_V4_URL"), "GitLab API URL")
@@ -43,13 +44,16 @@ func main() {
 
 	reviewCmd := &cobra.Command{
 		Use:   "review",
-		Short: "Full review cycle: prompt → Claude → upload → comment → HTML",
+		Short: "Full review cycle: prompt → AI → upload → comment → HTML",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cfg.Validate("review"); err != nil {
 				return err
 			}
 			log := slog.Default()
-			runner := &ctl.ExecClaudeRunner{Model: cfg.Model, Dir: cfg.Dir, SessionID: cfg.SessionID, ContinueSession: cfg.ContinueSession, Log: log}
+			runner, err := ctl.NewRunner(cfg, log)
+			if err != nil {
+				return err
+			}
 			c := ctl.NewController(cfg, runner, log)
 			return c.Review(cmd.Context())
 		},

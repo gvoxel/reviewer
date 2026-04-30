@@ -7,6 +7,7 @@ type Config struct {
 	Key       string
 	URL       string
 	PublicURL string // browser-facing base URL for links in MR comments; falls back to URL
+	Provider  string // AI provider: "claude" (default) or "codex"
 	Model     string
 	Dir       string
 	Verbose   bool
