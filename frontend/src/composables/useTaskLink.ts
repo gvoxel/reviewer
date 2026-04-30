@@ -6,11 +6,23 @@ function isGitHub(trackerURL: string): boolean {
   return trackerURL.includes('github.com')
 }
 
+function isJira(trackerURL: string): boolean {
+  try {
+    const host = new URL(trackerURL).hostname.toLowerCase()
+    return host.includes('jira') || host.endsWith('atlassian.net')
+  } catch {
+    return false
+  }
+}
+
 /** Build full task URL from tracker base URL and task ID. */
 export function buildTaskURL(trackerURL: string, taskId: string): string {
   const base = trackerURL.replace(/\/+$/, '')
   if (isGitHub(trackerURL)) {
     return `${base}/issues/${taskId}`
+  }
+  if (isJira(trackerURL)) {
+    return `${base}/browse/${taskId}`
   }
   return `${base}/issue/${taskId}`
 }
