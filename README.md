@@ -7,7 +7,7 @@ AI-powered code review platform using Claude. Collects, stores and displays code
 - **Multi-project support** with configurable prompts per project
 - **5 review types**: architecture, code, security, tests, operability
 - **Severity levels**: critical, high, medium, low with traffic light system (red/yellow/green)
-- **reviewctl CLI** — single binary for the full review cycle: prompt fetch, Claude Code, upload, GitLab MR comments, HTML report
+- **reviewctl CLI** — single binary for the full review cycle: prompt fetch, AI review (Claude Code or OpenAI Codex), upload, GitLab MR comments, HTML report
 - **GitLab MR inline comments** — critical and high issues posted directly in the diff with cleanup on re-runs
 - **Session caching** — `--session`/`--continue` flags to reuse Claude prompt cache (~90% token savings)
 - **Auto-migrations** — pgmigrator integrated as Go library, runs SQL patches on server startup
@@ -149,11 +149,28 @@ reviewctl comment   # Post MR comments for an existing review
 reviewctl version   # Print version
 ```
 
-Key flags: `--key`, `--url`, `--model`, `--session` (prompt cache reuse), `--continue` (resume last session). All flags have env variable equivalents for CI. See `reviewctl --help` for details.
+Key flags: `--key`, `--url`, `--provider`, `--model`, `--session` (prompt cache reuse), `--continue` (resume last session). All flags have env variable equivalents for CI. See `reviewctl --help` for details.
 
 ```bash
 make build-reviewctl   # Build reviewctl binary
 ```
+
+### AI providers
+
+`reviewctl` supports two providers via `--provider` (env `REVIEW_PROVIDER`, default `claude`):
+
+| `--provider` | CLI driven         | Model examples                                  | Auth                                            |
+|--------------|--------------------|-------------------------------------------------|-------------------------------------------------|
+| `claude`     | `claude` CLI       | `opus`, `sonnet`, `haiku`, `claude-opus-4-7`    | `claude /login` (Pro/Max) or `ANTHROPIC_API_KEY`|
+| `codex`      | `codex exec` CLI   | `gpt-5.4`, `gpt-5.5`, `gpt-5.4-mini`, `o4-mini` | `codex login` (ChatGPT) or `OPENAI_API_KEY`     |
+
+The `--model` value is passed verbatim to the underlying CLI — anything that CLI accepts works. The provider also determines which CLI binary is invoked, so `claude` or `codex` must be on `$PATH`.
+
+`--session` and `--continue` are currently honored by the Claude provider only. Codex accepts the flags for compatibility but logs a warning and runs a fresh session — see `BACKLOG.md`.
+
+Cost reporting:
+- For Claude, billing is taken directly from the CLI output (Anthropic's exact per-run cost).
+- For Codex, the CLI does not return cost; reviewctl estimates it from a static price table (see `pkg/reviewer/ctl/pricing.go`). Update the table when OpenAI changes prices.
 
 ## Auto-migrations
 
@@ -173,11 +190,14 @@ The admin panel (`/vt/`) provides ready-to-use CI configuration:
 2. Build the Docker image from the provided Dockerfile.
 3. Add CI/CD variables to your GitLab project:
    - `PROJECT_KEY` — project key from reviewer
-   - `ANTHROPIC_API_KEY` — Claude API key
+   - `ANTHROPIC_API_KEY` — Claude API key (when running with `--provider claude`, the default)
+   - `OPENAI_API_KEY` — OpenAI API key (when running with `--provider codex`)
    - `REVIEWER_GITLAB_TOKEN` — GitLab token for MR comments (optional)
 4. Paste the generated YAML into your repository's `.gitlab-ci.yml`.
 
-The CI job runs `reviewctl review` on merge requests. It fetches the prompt, runs Claude Code review, uploads results, and posts inline comments to the MR.
+The CI job runs `reviewctl review` on merge requests. It fetches the prompt, runs the selected AI CLI (Claude Code or Codex) to produce the review, uploads results, and posts inline comments to the MR.
+
+Note: the default GitLab CI template currently bundles the Claude CLI image (`vmkteam/claude-ci:latest`). To run with `--provider codex` in CI you need a custom image with `@openai/codex` installed — see `BACKLOG.md`.
 
 For local runs, click the **Run** button on a specific project row to get a ready-to-use bash script.
 
