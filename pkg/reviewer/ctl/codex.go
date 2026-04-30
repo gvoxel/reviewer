@@ -91,8 +91,16 @@ func ParseCodexResult(data []byte, model string) (*RunResult, error) {
 		case "turn.completed":
 			sawTurnCompleted = true
 			if ev.Usage != nil {
-				rr.Usage.InputTokens = ev.Usage.InputTokens
-				rr.Usage.CacheReadInputTokens = ev.Usage.CachedInputTokens
+				// Match Claude semantics: InputTokens is the new (non-cached) delta,
+				// CacheReadInputTokens is the cached portion. Codex reports the sum
+				// in input_tokens, so we subtract.
+				cached := ev.Usage.CachedInputTokens
+				nonCached := ev.Usage.InputTokens - cached
+				if nonCached < 0 {
+					nonCached = 0
+				}
+				rr.Usage.InputTokens = nonCached
+				rr.Usage.CacheReadInputTokens = cached
 				// Reasoning tokens are billed as output — combine for cost parity.
 				rr.Usage.OutputTokens = ev.Usage.OutputTokens + ev.Usage.ReasoningOutputTokens
 			}
@@ -115,7 +123,8 @@ func ParseCodexResult(data []byte, model string) (*RunResult, error) {
 	}
 
 	rr.Result = lastAgentMessage
-	rr.TotalCostUSD = CostUsd(model, rr.Usage.InputTokens, rr.Usage.OutputTokens)
+	rr.TotalCostUSD = CostUsdWithCache(model,
+		rr.Usage.InputTokens, rr.Usage.CacheReadInputTokens, rr.Usage.OutputTokens)
 
 	if rr.IsError && turnFailedMsg != "" {
 		return rr, fmt.Errorf("codex returned error: %s", turnFailedMsg)

@@ -21,17 +21,21 @@ func TestParseCodexResult_HappyPath(t *testing.T) {
 	assert.Equal(t, "hello world", rr.Result)
 	assert.Equal(t, "019dddcb-5ae0-7ea0-badb-1f3b041b07a4", rr.SessionID)
 	assert.Equal(t, 1, rr.NumTurns)
-	assert.Equal(t, 20535, rr.Usage.InputTokens)
+	// Codex reports total input incl. cached; we subtract to match Claude
+	// semantics: InputTokens is the non-cached delta, CacheReadInputTokens is
+	// the cached portion. Probe stream had 20535 total / 5504 cached.
+	assert.Equal(t, 20535-5504, rr.Usage.InputTokens)
 	assert.Equal(t, 5504, rr.Usage.CacheReadInputTokens)
 	// 17 output + 9 reasoning combined for billing parity.
 	assert.Equal(t, 26, rr.Usage.OutputTokens)
 	assert.False(t, rr.IsError)
 	assert.Equal(t, "end_turn", rr.StopReason)
 
-	// Cost is computed from the static price table.
 	mi := rr.ToModelInfo("gpt-5.4")
 	assert.Equal(t, ProviderCodex, mi.Provider)
-	assert.InDelta(t, CostUsd("gpt-5.4", 20535, 26), mi.CostUsd, 0.0001)
+	// Cost includes a discount on the cached portion.
+	expectedCost := CostUsdWithCache("gpt-5.4", 20535-5504, 5504, 26)
+	assert.InDelta(t, expectedCost, mi.CostUsd, 0.0001)
 }
 
 func TestParseCodexResult_CostUsesGivenModel(t *testing.T) {
