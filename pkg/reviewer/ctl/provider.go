@@ -1,7 +1,6 @@
 package ctl
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 )
@@ -31,10 +30,15 @@ func NewRunner(cfg *Config, log *slog.Logger) (ProviderRunner, error) {
 		}, nil
 
 	case ProviderCodex:
-		// CodexRunner ships in a follow-up commit. Codex CLI does support
-		// session resume via "codex exec resume --last|<id>", but that is
-		// deferred — see BACKLOG.md.
-		return nil, errors.New("provider codex: not implemented yet")
+		// Codex session resume (--continue / --session) is not yet wired —
+		// CodexRunner logs a warning and ignores those fields. See BACKLOG.md.
+		return &CodexRunner{
+			Model:           cfg.Model,
+			Dir:             cfg.Dir,
+			SessionID:       cfg.SessionID,
+			ContinueSession: cfg.ContinueSession,
+			Log:             log,
+		}, nil
 
 	default:
 		return nil, fmt.Errorf("unknown provider %q (supported: %s, %s)", provider, ProviderClaude, ProviderCodex)

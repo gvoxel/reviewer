@@ -8,6 +8,7 @@ type ReviewFileIssueStats struct {
 	Total    int `json:"total"`
 }
 type ReviewModelInfo struct {
+	Provider     string  `json:"provider,omitempty"`
 	Model        string  `json:"model"`
 	InputTokens  int     `json:"inputTokens"`
 	OutputTokens int     `json:"outputTokens"`

@@ -147,6 +147,7 @@ func TestRunResultToModelInfo(t *testing.T) {
 	assert.Equal(t, "end_turn", mi.StopReason)
 	assert.Equal(t, "completed", mi.TerminalReason)
 	assert.False(t, mi.IsError)
+	assert.Equal(t, ProviderClaude, mi.Provider)
 
 	require.Contains(t, mi.Models, "claude-opus-4-6")
 	opus := mi.Models["claude-opus-4-6"]

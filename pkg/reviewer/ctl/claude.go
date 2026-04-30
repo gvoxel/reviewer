@@ -20,7 +20,12 @@ const claudeResultType = "result"
 // RunResult is the provider-neutral result of an AI CLI run.
 // Shape is currently based on Claude's --output-format json; other providers
 // (e.g. Codex) populate the subset of fields they emit, leaving the rest zero.
+//
+// Provider is set by the runner before return ("claude", "codex"). It is not
+// part of any provider's wire format, hence the "-" json tag — it travels via
+// ToModelInfo to db.ReviewModelInfo.
 type RunResult struct {
+	Provider          string                    `json:"-"`
 	Type              string                    `json:"type"`
 	Subtype           string                    `json:"subtype"`
 	Result            string                    `json:"result"`
@@ -125,6 +130,8 @@ func parseResultObject(data []byte) (*RunResult, error) {
 		return nil, fmt.Errorf("unexpected claude output type: %q", cr.Type)
 	}
 
+	cr.Provider = ProviderClaude
+
 	if cr.Subtype == "error_max_turns" || cr.Subtype == "error" {
 		return &cr, fmt.Errorf("claude returned error: %s", cr.Result)
 	}
@@ -137,6 +144,7 @@ func parseResultObject(data []byte) (*RunResult, error) {
 // from modelUsage when available — e.g. "opus" → "claude-opus-4-7".
 func (cr *RunResult) ToModelInfo(model string) db.ReviewModelInfo {
 	mi := db.ReviewModelInfo{
+		Provider:     cr.Provider,
 		Model:        primaryModelName(cr.ModelUsage, model),
 		InputTokens:  cr.Usage.InputTokens,
 		OutputTokens: cr.Usage.OutputTokens,
