@@ -16,12 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testClaudeRunner returns a fixed ClaudeResult from testdata.
-type testClaudeRunner struct {
+// testProviderRunner returns a fixed RunResult from testdata.
+type testProviderRunner struct {
 	fixturePath string
 }
 
-func (r *testClaudeRunner) Run(_ context.Context, _ string) (*ClaudeResult, error) {
+func (r *testProviderRunner) Run(_ context.Context, _ string) (*RunResult, error) {
 	data, err := os.ReadFile(r.fixturePath)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func TestController_Review(t *testing.T) {
 		TargetBranch: "master",
 	}
 
-	runner := &testClaudeRunner{fixturePath: "testdata/claude_result.json"}
+	runner := &testProviderRunner{fixturePath: "testdata/claude_result.json"}
 	c := NewController(cfg, runner, slog.Default())
 
 	err := c.Review(context.Background())

@@ -17,11 +17,11 @@ type Controller struct {
 	prompt *PromptClient
 	upload *UploadClient
 	gitlab *GitLabClient
-	runner ClaudeRunner
+	runner ProviderRunner
 }
 
 // NewController creates a new Controller from Config.
-func NewController(cfg *Config, runner ClaudeRunner, log *slog.Logger) *Controller {
+func NewController(cfg *Config, runner ProviderRunner, log *slog.Logger) *Controller {
 	c := &Controller{
 		cfg:    cfg,
 		log:    log,
