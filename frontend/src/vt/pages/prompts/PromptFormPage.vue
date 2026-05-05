@@ -113,7 +113,7 @@ const languagePresets: Record<string, { title: string; common?: string; fullProm
     operability: 'Fabien Potencier. Проведи ревью операционной готовности этого MR: логирование, метрики, трейсинг, миграции БД, cache invalidation, конфигурацию окружений, graceful degradation, rollback plan, совместимость с существующим production-поведением и риски выката legacy-изменений.',
   },
   'PHP / Symfony (Modern)': {
-    title: 'PHP Symfony Modern Review',
+    title: 'PHP Symfony Review',
     fullPrompts: true,
     common: 'Дополнительно проверь текст задачи на предмет фикса.\nЕсли были исправлены ошибки, предположи, что к ним привело и где еще могут быть потенциальные ошибки.\nПроверь типичные для modern Symfony проектов зоны риска: Messenger, API Platform/JSON serialization, Doctrine, Event Subscriber, Cache, feature flags, env/config, idempotency, migrations и контрактную совместимость API.',
     architecture: 'Matthias Noback. Есть ли ошибки в бизнес логике? Проведи архитектурное ревью этого MR для modern Symfony 6/7 проекта: границы между controller/application/domain/infrastructure слоями, корректность использования Doctrine, Messenger, Event Dispatcher, API Platform, DTO/Entity separation, инварианты домена, транзакционные границы, идемпотентность и расширяемость решения.',
