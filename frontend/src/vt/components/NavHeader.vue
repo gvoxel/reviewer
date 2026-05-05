@@ -9,7 +9,7 @@
 
           <nav class="flex items-center gap-3 text-sm font-medium shrink-0">
             <a href="/reviews/" class="text-fg-subtle hover:text-fg-secondary transition-colors">Reviews</a>
-            <span class="text-accent">VT</span>
+            <span class="text-accent">Settings</span>
           </nav>
 
           <span class="h-5 w-px bg-edge hidden md:block"></span>
