@@ -17,8 +17,15 @@ import (
 
 const claudeResultType = "result"
 
-// ClaudeResult represents the JSON output from claude --output-format json.
-type ClaudeResult struct {
+// RunResult is the provider-neutral result of an AI CLI run.
+// Shape is currently based on Claude's --output-format json; other providers
+// (e.g. Codex) populate the subset of fields they emit, leaving the rest zero.
+//
+// Provider is set by the runner before return ("claude", "codex"). It is not
+// part of any provider's wire format, hence the "-" json tag — it travels via
+// ToModelInfo to db.ReviewModelInfo.
+type RunResult struct {
+	Provider          string                    `json:"-"`
 	Type              string                    `json:"type"`
 	Subtype           string                    `json:"subtype"`
 	Result            string                    `json:"result"`
@@ -72,7 +79,7 @@ type ClaudeModelUse struct {
 // ParseClaudeResult parses the JSON output from Claude CLI.
 // Supports both single JSON object and JSON array (from --resume or --verbose).
 // Tolerates truncated JSON arrays by using streaming decoder.
-func ParseClaudeResult(data []byte) (*ClaudeResult, error) {
+func ParseClaudeResult(data []byte) (*RunResult, error) {
 	if len(data) == 0 {
 		return nil, errors.New("empty claude output")
 	}
@@ -113,8 +120,8 @@ func ParseClaudeResult(data []byte) (*ClaudeResult, error) {
 	return parseResultObject(data)
 }
 
-func parseResultObject(data []byte) (*ClaudeResult, error) {
-	var cr ClaudeResult
+func parseResultObject(data []byte) (*RunResult, error) {
+	var cr RunResult
 	if err := json.Unmarshal(data, &cr); err != nil {
 		return nil, fmt.Errorf("parse claude result: %w", err)
 	}
@@ -123,6 +130,8 @@ func parseResultObject(data []byte) (*ClaudeResult, error) {
 		return nil, fmt.Errorf("unexpected claude output type: %q", cr.Type)
 	}
 
+	cr.Provider = ProviderClaude
+
 	if cr.Subtype == "error_max_turns" || cr.Subtype == "error" {
 		return &cr, fmt.Errorf("claude returned error: %s", cr.Result)
 	}
@@ -130,11 +139,12 @@ func parseResultObject(data []byte) (*ClaudeResult, error) {
 	return &cr, nil
 }
 
-// ToModelInfo converts ClaudeResult to db.ReviewModelInfo.
+// ToModelInfo converts RunResult to db.ReviewModelInfo.
 // The fallback model name (CLI -m flag) is replaced by the full model id
 // from modelUsage when available — e.g. "opus" → "claude-opus-4-7".
-func (cr *ClaudeResult) ToModelInfo(model string) db.ReviewModelInfo {
+func (cr *RunResult) ToModelInfo(model string) db.ReviewModelInfo {
 	mi := db.ReviewModelInfo{
+		Provider:     cr.Provider,
 		Model:        primaryModelName(cr.ModelUsage, model),
 		InputTokens:  cr.Usage.InputTokens,
 		OutputTokens: cr.Usage.OutputTokens,
@@ -192,9 +202,9 @@ func primaryModelName(modelUsage map[string]ClaudeModelUse, fallback string) str
 	return best
 }
 
-// ClaudeRunner abstracts the Claude CLI subprocess for testability.
-type ClaudeRunner interface {
-	Run(ctx context.Context, prompt string) (*ClaudeResult, error)
+// ProviderRunner abstracts an AI CLI subprocess (Claude, Codex, ...) for testability.
+type ProviderRunner interface {
+	Run(ctx context.Context, prompt string) (*RunResult, error)
 }
 
 // ExecClaudeRunner runs the real claude CLI subprocess.
@@ -207,7 +217,7 @@ type ExecClaudeRunner struct {
 }
 
 // Run executes claude --print --output-format json and parses the result.
-func (r *ExecClaudeRunner) Run(ctx context.Context, prompt string) (*ClaudeResult, error) {
+func (r *ExecClaudeRunner) Run(ctx context.Context, prompt string) (*RunResult, error) {
 	args := []string{
 		"--print",
 		"--output-format", "json",
@@ -287,7 +297,7 @@ func (r *ExecClaudeRunner) Run(ctx context.Context, prompt string) (*ClaudeResul
 	return cr, nil
 }
 
-func (r *ExecClaudeRunner) logResult(ctx context.Context, cr *ClaudeResult) {
+func (r *ExecClaudeRunner) logResult(ctx context.Context, cr *RunResult) {
 	r.Log.InfoContext(ctx, "claude result parsed",
 		"cost", cr.TotalCostUSD,
 		"turns", cr.NumTurns,
@@ -329,7 +339,7 @@ func (r *ExecClaudeRunner) saveOutput(data []byte) {
 	}
 }
 
-func (r *ExecClaudeRunner) handleClaudeError(err error, stdout []byte, stderr string) (*ClaudeResult, error) {
+func (r *ExecClaudeRunner) handleClaudeError(err error, stdout []byte, stderr string) (*RunResult, error) {
 	if len(stdout) > 0 {
 		if cr, parseErr := ParseClaudeResult(stdout); parseErr == nil {
 			return cr, fmt.Errorf("claude exited with error: %w", err)

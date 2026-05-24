@@ -108,7 +108,10 @@
                 ? modelBreakdown.map(m => `${m.name}: ${formatCost(m.costUsd)} · in ${(m.inputTokens ?? 0).toLocaleString()} / out ${(m.outputTokens ?? 0).toLocaleString()}`).join('\n')
                 : undefined"
             >
-              {{ review.modelInfo.model }}<span
+              <span
+                v-if="review.modelInfo.provider"
+                class="text-fg-subtle text-xs mr-1"
+              >{{ review.modelInfo.provider }}</span>{{ review.modelInfo.model }}<span
                 v-if="modelBreakdown.length > 1"
                 class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-accent-light text-accent"
               >+{{ modelBreakdown.length - 1 }}</span>
@@ -130,6 +133,67 @@
             <div class="text-sm text-fg-secondary">{{ formatCost(review.modelInfo.costUsd) }}</div>
           </div>
         </div>
+
+        <!-- Expandable diagnostic details -->
+        <details v-if="review.modelInfo" class="mt-4 border-t border-edge-light pt-3">
+          <summary class="cursor-pointer text-[11px] font-medium text-fg-subtle uppercase tracking-wider hover:text-fg-secondary select-none">
+            Run details
+          </summary>
+          <dl class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-xs">
+            <div v-if="review.modelInfo.numTurns">
+              <dt class="text-fg-subtle">Turns</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.numTurns }}</dd>
+            </div>
+            <div v-if="review.modelInfo.sessionId" class="col-span-2 sm:col-span-2 min-w-0">
+              <dt class="text-fg-subtle">Session ID</dt>
+              <dd class="font-mono text-[11px] text-fg-secondary truncate" :title="review.modelInfo.sessionId">{{ review.modelInfo.sessionId }}</dd>
+            </div>
+            <div v-if="review.modelInfo.stopReason">
+              <dt class="text-fg-subtle">Stop reason</dt>
+              <dd class="text-fg-secondary">{{ review.modelInfo.stopReason }}</dd>
+            </div>
+            <div v-if="review.modelInfo.terminalReason">
+              <dt class="text-fg-subtle">Terminal reason</dt>
+              <dd class="text-fg-secondary">{{ review.modelInfo.terminalReason }}</dd>
+            </div>
+            <div v-if="review.modelInfo.durationApiMs">
+              <dt class="text-fg-subtle">API time</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ formatDuration(review.modelInfo.durationApiMs) }}</dd>
+            </div>
+            <div v-if="review.modelInfo.durationTotalMs">
+              <dt class="text-fg-subtle">Wall-clock</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ formatDuration(review.modelInfo.durationTotalMs) }}</dd>
+            </div>
+            <div v-if="review.modelInfo.cacheReadInputTokens">
+              <dt class="text-fg-subtle">Cache read</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.cacheReadInputTokens.toLocaleString() }}</dd>
+            </div>
+            <div v-if="review.modelInfo.cacheCreationInputTokens">
+              <dt class="text-fg-subtle">Cache write</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.cacheCreationInputTokens.toLocaleString() }}</dd>
+            </div>
+            <div v-if="review.modelInfo.cacheCreate1hInputTokens">
+              <dt class="text-fg-subtle">Cache 1h write</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.cacheCreate1hInputTokens.toLocaleString() }}</dd>
+            </div>
+            <div v-if="review.modelInfo.cacheCreate5mInputTokens">
+              <dt class="text-fg-subtle">Cache 5m write</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.cacheCreate5mInputTokens.toLocaleString() }}</dd>
+            </div>
+            <div v-if="review.modelInfo.webSearchRequests">
+              <dt class="text-fg-subtle">Web search</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.webSearchRequests }}</dd>
+            </div>
+            <div v-if="review.modelInfo.webFetchRequests">
+              <dt class="text-fg-subtle">Web fetch</dt>
+              <dd class="text-fg-secondary tabular-nums">{{ review.modelInfo.webFetchRequests }}</dd>
+            </div>
+            <div v-if="review.modelInfo.isError">
+              <dt class="text-fg-subtle">Status</dt>
+              <dd class="text-red-600 dark:text-red-400">errored</dd>
+            </div>
+          </dl>
+        </details>
       </div>
 
       <!-- Tabs -->

@@ -96,19 +96,50 @@ async function handleDelete() {
   if (props.id && await remove(parseInt(props.id))) router.push('/prompts')
 }
 
-const languagePresets: Record<string, { title: string; code: string; architecture: string; security: string; tests: string; operability: string }> = {
+const languagePresets: Record<string, { title: string; common?: string; fullPrompts?: boolean; code: string; architecture: string; security: string; tests: string; operability: string }> = {
   'Go': { title: 'Go Review', code: 'Rob Pike', architecture: 'Dave Cheney', security: 'Filippo Valsorda', tests: 'Mitchell Hashimoto', operability: 'Peter Bourgon. Проведи ревью операционной готовности этого MR: логирование, метрики, трейсинг, алерты, feature flags, graceful degradation, миграции БД, план отката.' },
   'Swift / iOS': { title: 'Swift Review', code: 'Chris Lattner', architecture: 'Krzysztof Zabłocki', security: 'Philippe De Ryck', tests: 'John Sundell', operability: 'Felix Krause. Проведи ревью операционной готовности этого MR: crash reporting, аналитика, feature flags, релизные пайплайны, graceful degradation, план отката.' },
   'Kotlin / Android': { title: 'Kotlin Review', code: 'Roman Elizarov', architecture: 'Yigit Boyar', security: 'Maddie Stone', tests: 'Jake Wharton', operability: 'Chet Haase. Проведи ревью операционной готовности этого MR: crash reporting, ANR, профилирование, логирование, feature flags, graceful degradation, план отката.' },
   'Vue + Nuxt': { title: 'Vue Review', code: 'Evan You', architecture: 'Daniel Roe', security: 'Liran Tal', tests: 'Jessica Sachs', operability: 'Sébastien Chopin. Проведи ревью операционной готовности этого MR: error boundaries, SSR fallback, edge rendering, performance monitoring, feature flags, graceful degradation.' },
   'Python': { title: 'Python Review', code: 'Raymond Hettinger', architecture: 'Sebastián Ramírez', security: 'Anthony Shaw', tests: 'Brian Okken', operability: 'Hynek Schlawack. Проведи ревью операционной готовности этого MR: structured logging, метрики, трейсинг, алерты, feature flags, graceful degradation, миграции БД, план отката.' },
+  'PHP / Symfony (Legacy)': {
+    title: 'PHP Symfony Legacy Review',
+    fullPrompts: true,
+    common: 'Дополнительно проверь текст задачи на предмет фикса.\nЕсли были исправлены ошибки, предположи, что к ним привело и где еще могут быть потенциальные ошибки.\nПроверь типичные для legacy Symfony/PHP проектов зоны риска: fat controllers/services, Doctrine entities с бизнес-логикой, Form/Validator, Twig, Event Subscriber, Console commands, migrations, env-конфигурацию и обратную совместимость.',
+    architecture: 'Matthias Noback. Есть ли ошибки в бизнес логике? Проведи архитектурное ревью этого MR для legacy Symfony-проекта: границы между controller/application/domain/infrastructure слоями, корректность использования Doctrine, сервисного контейнера, Form/Validator, DTO/Entity separation, транзакционные границы, инварианты домена, расширяемость решения и план безопасного упрощения legacy-кода без лишнего переписывания.',
+    code: 'Nicolas Grekas. Обязательно расскажи, что можно улучшить и упросить в данном коде. Проведи code review этого MR для legacy Symfony/PHP: читаемость, соответствие современным практикам PHP 8.x и Symfony, работа с типами, обработка ошибок, DI, лишняя сложность, дублирование, misuse Doctrine collections/query builder, N+1, избыточную связность и неудачные абстракции.',
+    security: 'Scott Arciszewski. Проведи ревью безопасности этого MR. Проверь аутентификацию и авторизацию, access control, mass assignment, input validation, XSS, CSRF, SQL injection, SSRF, file upload, session/cookie handling, небезопасную работу с Doctrine query builder, утечки чувствительных данных в логах и конфигурации, а также типичные legacy-ошибки в firewall/voters.',
+    tests: 'Sebastian Bergmann. Проведи ревью тестов этого MR. Если тестов нет — укажи, какие нужно добавить и почему. Проверь unit/integration/functional tests для Symfony: покрытие бизнес-инвариантов, Doctrine persistence, controller behavior, edge cases, regression coverage, качество fixtures/mocks, изоляцию тестов и хрупкие assertions.',
+    operability: 'Fabien Potencier. Проведи ревью операционной готовности этого MR: логирование, метрики, трейсинг, миграции БД, cache invalidation, конфигурацию окружений, graceful degradation, rollback plan, совместимость с существующим production-поведением и риски выката legacy-изменений.',
+  },
+  'PHP / Symfony (Modern)': {
+    title: 'PHP Symfony Review',
+    fullPrompts: true,
+    common: 'Дополнительно проверь текст задачи на предмет фикса.\nЕсли были исправлены ошибки, предположи, что к ним привело и где еще могут быть потенциальные ошибки.\nПроверь типичные для modern Symfony проектов зоны риска: Messenger, API Platform/JSON serialization, Doctrine, Event Subscriber, Cache, feature flags, env/config, idempotency, migrations и контрактную совместимость API.',
+    architecture: 'Matthias Noback. Есть ли ошибки в бизнес логике? Проведи архитектурное ревью этого MR для modern Symfony 6/7 проекта: границы между controller/application/domain/infrastructure слоями, корректность использования Doctrine, Messenger, Event Dispatcher, API Platform, DTO/Entity separation, инварианты домена, транзакционные границы, идемпотентность и расширяемость решения.',
+    code: 'Nicolas Grekas. Обязательно расскажи, что можно улучшить и упросить в данном коде. Проведи code review этого MR для Symfony/PHP: читаемость, соответствие современным практикам PHP 8.x и Symfony, strict typing, value objects, обработка ошибок, DI, performance hot paths, misuse Doctrine/query builder/serializer, лишняя сложность и неудачные абстракции.',
+    security: 'Scott Arciszewski. Проведи ревью безопасности этого MR. Проверь аутентификацию и авторизацию, доступ к ресурсам, mass assignment, input validation, XSS, CSRF, SQL injection, SSRF, insecure deserialization, file upload, secrets handling, ошибки в voters/firewalls/access control, небезопасную сериализацию API и утечки чувствительных данных в логах.',
+    tests: 'Sebastian Bergmann. Проведи ревью тестов этого MR. Если тестов нет — укажи, какие нужно добавить и почему. Проверь unit/integration/functional tests для Symfony: покрытие бизнес-инвариантов, controller behavior, Doctrine persistence, Messenger handlers, API contracts, консольных команд, edge cases, regression coverage, изоляцию тестов и качество fixtures/mocks.',
+    operability: 'Fabien Potencier. Проведи ревью операционной готовности этого MR: логирование, метрики, трейсинг, feature flags, graceful degradation, миграции БД, cache invalidation, очереди Messenger, retry/failure transport, health checks, конфигурацию окружений, rollback plan и влияние на production.',
+  },
 }
 
 type FillableField = 'common' | 'architecture' | 'code' | 'security' | 'tests' | 'operability'
 
 function buildFillValues(p: typeof languagePresets[string]): Record<FillableField, string> {
+  if (p.fullPrompts) {
+    return {
+      common: p.common || 'Дополнительно проверь текст задачи на предмет фикса.\nЕсли были исправлены ошибки, предположи, что к ним привело и где еще могут быть потенциальные ошибки.',
+      architecture: p.architecture,
+      code: p.code,
+      security: p.security,
+      tests: p.tests,
+      operability: p.operability,
+    }
+  }
+
   return {
-    common: 'Дополнительно проверь текст задачи на предмет фикса.\nЕсли были исправлены ошибки, предположи, что к ним привело и где еще могут быть потенциальные ошибки.',
+    common: p.common || 'Дополнительно проверь текст задачи на предмет фикса.\nЕсли были исправлены ошибки, предположи, что к ним привело и где еще могут быть потенциальные ошибки.',
     architecture: `${p.architecture}. Есть ли ошибки в бизнес логике?`,
     code: `${p.code}. Обязательно расскажи, что можно улучшить и упросить в данном коде.`,
     security: `${p.security}. Проведи ревью безопасности этого MR.`,

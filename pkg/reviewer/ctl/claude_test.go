@@ -48,7 +48,7 @@ func TestParseClaudeResult_Error(t *testing.T) {
 
 	cr, err := ParseClaudeResult(data)
 	require.Error(t, err)
-	require.NotNil(t, cr, "expected ClaudeResult even on error")
+	require.NotNil(t, cr, "expected RunResult even on error")
 	assert.Equal(t, "error_max_turns", cr.Subtype)
 }
 
@@ -120,7 +120,7 @@ func TestParseClaudeResult_NDJSON_File(t *testing.T) {
 	assert.Equal(t, 1879403, cr.Usage.CacheReadInputTokens)
 }
 
-func TestClaudeResultToModelInfo(t *testing.T) {
+func TestRunResultToModelInfo(t *testing.T) {
 	data, err := os.ReadFile("testdata/claude_result.json")
 	require.NoError(t, err)
 
@@ -147,6 +147,7 @@ func TestClaudeResultToModelInfo(t *testing.T) {
 	assert.Equal(t, "end_turn", mi.StopReason)
 	assert.Equal(t, "completed", mi.TerminalReason)
 	assert.False(t, mi.IsError)
+	assert.Equal(t, ProviderClaude, mi.Provider)
 
 	require.Contains(t, mi.Models, "claude-opus-4-6")
 	opus := mi.Models["claude-opus-4-6"]
@@ -154,8 +155,8 @@ func TestClaudeResultToModelInfo(t *testing.T) {
 	assert.InDelta(t, 2.0875265, opus.CostUsd, 0.0001)
 }
 
-func TestClaudeResultToModelInfo_PrimaryModelPicksHighestCost(t *testing.T) {
-	cr := &ClaudeResult{
+func TestRunResultToModelInfo_PrimaryModelPicksHighestCost(t *testing.T) {
+	cr := &RunResult{
 		Type:    claudeResultType,
 		Subtype: "success",
 		ModelUsage: map[string]ClaudeModelUse{
@@ -167,8 +168,8 @@ func TestClaudeResultToModelInfo_PrimaryModelPicksHighestCost(t *testing.T) {
 	assert.Equal(t, "claude-opus-4-7", cr.ToModelInfo("opus").Model)
 }
 
-func TestClaudeResultToModelInfo_FallbackWhenNoModelUsage(t *testing.T) {
-	cr := &ClaudeResult{Type: claudeResultType, Subtype: "success"}
+func TestRunResultToModelInfo_FallbackWhenNoModelUsage(t *testing.T) {
+	cr := &RunResult{Type: claudeResultType, Subtype: "success"}
 
 	assert.Equal(t, "opus", cr.ToModelInfo("opus").Model)
 }

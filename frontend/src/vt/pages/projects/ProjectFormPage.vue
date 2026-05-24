@@ -79,6 +79,7 @@ import { useRouter } from 'vue-router'
 import vtApi, { type Project } from '../../../api/vt'
 import { useForm } from '../../composables/useForm'
 import { extractTitleFromVcsURL } from '../../composables/useVcsTitle'
+import { loadAllFKOptions } from '../../composables/loadAllFkOptions'
 import FormField from '../../components/FormField.vue'
 import StatusRadio from '../../components/StatusRadio.vue'
 import FKSelect from '../../components/FKSelect.vue'
@@ -98,18 +99,15 @@ const { entity, loading, saving, error, fieldError, load, save, remove } = useFo
 }))
 
 async function loadPrompts() {
-  const list = await vtApi.prompt.get({ viewOps: { page: 1, pageSize: 500, sortColumn: 'title', sortDesc: false } })
-  return (list ?? []).map(p => ({ id: p.id, title: p.title }))
+  return loadAllFKOptions(vtApi.prompt)
 }
 
 async function loadTaskTrackers() {
-  const list = await vtApi.tasktracker.get({ viewOps: { page: 1, pageSize: 500, sortColumn: 'title', sortDesc: false } })
-  return (list ?? []).map(t => ({ id: t.id, title: t.title }))
+  return loadAllFKOptions(vtApi.tasktracker)
 }
 
 async function loadSlackChannels() {
-  const list = await vtApi.slackchannel.get({ viewOps: { page: 1, pageSize: 500, sortColumn: 'title', sortDesc: false } })
-  return (list ?? []).map(s => ({ id: s.id, title: s.title }))
+  return loadAllFKOptions(vtApi.slackchannel)
 }
 
 onMounted(() => {

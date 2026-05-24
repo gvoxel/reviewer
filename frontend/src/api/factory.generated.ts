@@ -41,6 +41,7 @@ export interface ILastReview {
 }
 
 export interface IModelInfo {
+  provider?: string,
   model: string,
   inputTokens: number,
   outputTokens: number,
@@ -238,6 +239,7 @@ export class LastReview implements ILastReview {
 export class ModelInfo implements IModelInfo {
   static entityName = "modelinfo";
 
+  provider: string = null;
   model: string = null;
   inputTokens: number = 0;
   outputTokens: number = 0;
