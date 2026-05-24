@@ -1,8 +1,9 @@
 [Server]
-Host    = "0.0.0.0"
-Port    = 8080
-IsDevel = false
-BaseURL = "http://localhost:8080"
+Host        = "0.0.0.0"
+Port        = 8080
+IsDevel     = false
+BaseURL     = "http://localhost:8080"
+DownloadDir = "/srv/download"
 
 [Database]
 Addr            = "db:5432"
