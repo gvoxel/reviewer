@@ -7,8 +7,9 @@ import (
 
 // Provider names accepted by the --provider flag.
 const (
-	ProviderClaude = "claude"
-	ProviderCodex  = "codex"
+	ProviderClaude   = "claude"
+	ProviderCodex    = "codex"
+	ProviderOpencode = "opencode"
 )
 
 // NewRunner builds the ProviderRunner implementation that matches cfg.Provider.
@@ -40,7 +41,18 @@ func NewRunner(cfg *Config, log *slog.Logger) (ProviderRunner, error) {
 			Log:             log,
 		}, nil
 
+	case ProviderOpencode:
+		return &OpencodeRunner{
+			Bin:             cfg.OpencodeBin,
+			Model:           cfg.Model,
+			Dir:             cfg.Dir,
+			SessionID:       cfg.SessionID,
+			ContinueSession: cfg.ContinueSession,
+			Log:             log,
+		}, nil
+
 	default:
-		return nil, fmt.Errorf("unknown provider %q (supported: %s, %s)", provider, ProviderClaude, ProviderCodex)
+		return nil, fmt.Errorf("unknown provider %q (supported: %s, %s, %s)",
+			provider, ProviderClaude, ProviderCodex, ProviderOpencode)
 	}
 }

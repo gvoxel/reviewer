@@ -68,6 +68,16 @@ build-reviewctl:
 		-ldflags "-s -w -X main.version=$(VERSION)" \
 		-o bin/reviewctl ./cmd/reviewctl
 
+# Cross-compile reviewctl for all launcher-supported platforms and emit
+# SHA256SUMS. Output goes to bin/ for serving via /download/.
+RCTL_LDFLAGS := -s -w -X main.version=$(VERSION)
+build-reviewctl-all:
+	@CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(GOFLAGS) -ldflags "$(RCTL_LDFLAGS)" -o bin/reviewctl-darwin-arm64      ./cmd/reviewctl
+	@CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(GOFLAGS) -ldflags "$(RCTL_LDFLAGS)" -o bin/reviewctl-darwin-amd64      ./cmd/reviewctl
+	@CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(GOFLAGS) -ldflags "$(RCTL_LDFLAGS)" -o bin/reviewctl-linux-amd64       ./cmd/reviewctl
+	@CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(GOFLAGS) -ldflags "$(RCTL_LDFLAGS)" -o bin/reviewctl-windows-amd64.exe ./cmd/reviewctl
+	@cd bin && shasum -a 256 reviewctl-* > SHA256SUMS
+
 run:
 	@mkdir -p frontend/dist frontend/dist-vt
 	@echo "Compiling"

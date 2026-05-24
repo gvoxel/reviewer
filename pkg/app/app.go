@@ -26,6 +26,9 @@ type Config struct {
 		IsDevel   bool
 		EnableVFS bool
 		BaseURL   string
+		// DownloadDir is served as static files at /download/ (reviewctl
+		// binaries for the RS AI Launcher). Empty disables the route.
+		DownloadDir string
 	}
 	Sentry struct {
 		Environment string
@@ -68,6 +71,7 @@ func New(appName, version string, sl embedlog.Logger, cfg Config, db db.DB, dbc 
 func (a *App) Run(ctx context.Context) error {
 	a.registerMetrics()
 	a.registerHandlers()
+	a.registerDownloadHandlers()
 	a.registerDebugHandlers()
 	a.registerAPIHandlers()
 	a.registerVTApiHandlers()

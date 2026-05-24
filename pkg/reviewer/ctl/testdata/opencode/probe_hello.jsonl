@@ -1,0 +1,3 @@
+{"type":"step_start","timestamp":1779624229990,"sessionID":"ses_test01","part":{"id":"prt_test01","messageID":"msg_test01","sessionID":"ses_test01","type":"step-start"}}
+{"type":"text","timestamp":1779624230306,"sessionID":"ses_test01","part":{"id":"prt_test02","messageID":"msg_test01","sessionID":"ses_test01","type":"text","text":"hello","time":{"start":1779624230240,"end":1779624230304},"metadata":{"openai":{"itemId":"msg_07","phase":"final_answer"}}}}
+{"type":"step_finish","timestamp":1779624230347,"sessionID":"ses_test01","part":{"id":"prt_test03","reason":"stop","messageID":"msg_test01","sessionID":"ses_test01","type":"step-finish","tokens":{"total":21413,"input":21392,"output":7,"reasoning":14,"cache":{"write":0,"read":0}},"cost":0}}

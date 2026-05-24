@@ -73,6 +73,18 @@ func (a *App) registerHandlers() {
 	a.echo.GET("/v1/rpc/review-fix-:id", h.ReviewFixMarkdown, lg)
 }
 
+// registerDownloadHandlers serves static files from cfg.Server.DownloadDir at
+// /download/ — reviewctl release binaries (and SHA256SUMS) that the RS AI
+// Launcher fetches by fixed URL. No-op when DownloadDir is empty.
+func (a *App) registerDownloadHandlers() {
+	dir := a.cfg.Server.DownloadDir
+	if dir == "" {
+		return
+	}
+	fileServer := http.FileServer(http.Dir(dir))
+	a.echo.GET("/download/*", echo.WrapHandler(http.StripPrefix("/download/", fileServer)))
+}
+
 // registerDebugHandlers adds /debug/pprof handlers into a.echo instance.
 func (a *App) registerDebugHandlers() {
 	dbg := a.echo.Group("/debug")

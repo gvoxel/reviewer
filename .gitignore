@@ -11,3 +11,7 @@ tsconfig.tsbuildinfo
 docs/patches/pgmigrator.toml
 frontend/dist/
 frontend/dist-vt/
+bin/
+codex-output.jsonl
+opencode-output.jsonl
+claude-output.json
