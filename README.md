@@ -152,8 +152,26 @@ reviewctl version   # Print version
 Key flags: `--key`, `--url`, `--provider`, `--model`, `--session` (prompt cache reuse), `--continue` (resume last session). All flags have env variable equivalents for CI. See `reviewctl --help` for details.
 
 ```bash
-make build-reviewctl   # Build reviewctl binary
+make build-reviewctl       # Build reviewctl for the current platform
+make build-reviewctl-all   # Cross-compile all platforms + SHA256SUMS into bin/
 ```
+
+### Binary distribution (`/download/`)
+
+The server can serve reviewctl release binaries as static files at `/download/`
+so the RS AI Launcher can fetch them by fixed URL (e.g.
+`/download/reviewctl-darwin-arm64`, `/download/SHA256SUMS`). Enable it by setting
+`Server.DownloadDir` in the config:
+
+```toml
+[Server]
+DownloadDir = "/srv/download"
+```
+
+The Docker image cross-compiles all platforms into `/srv/download` at build time,
+and `cfg/docker.toml` points `DownloadDir` there — so downloads work out of the
+box in the container. For host runs, populate the directory with
+`make build-reviewctl-all` (writes to `bin/`) and point `DownloadDir` at it.
 
 ### AI providers
 
@@ -217,6 +235,7 @@ When deploying behind a reverse proxy, URLs should be split by access level:
 | `/vt/` | Admin panel |
 | `/v1/rpc/` | Review JSON-RPC API |
 | `/v1/vt/` | Admin JSON-RPC API |
+| `/download/` | reviewctl release binaries (when `Server.DownloadDir` is set) |
 
 **Internal (CI only, must not be exposed externally):**
 
