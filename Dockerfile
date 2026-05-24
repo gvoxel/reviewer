@@ -18,8 +18,15 @@ COPY --from=frontend /frontend/dist-vt /build/frontend/dist-vt
 RUN cd /build \
     && VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}" \
     && echo "building version=$VERSION" \
-    && go build -mod=vendor -ldflags "-s -w -X main.version=$VERSION" -o /go/bin/reviewsrv ./cmd/reviewsrv \
-    && CGO_ENABLED=0 go build -mod=vendor -ldflags "-s -w -X main.version=$VERSION" -o /go/bin/reviewctl ./cmd/reviewctl
+    && LDFLAGS="-s -w -X main.version=$VERSION" \
+    && go build -mod=vendor -ldflags "$LDFLAGS" -o /go/bin/reviewsrv ./cmd/reviewsrv \
+    && CGO_ENABLED=0 go build -mod=vendor -ldflags "$LDFLAGS" -o /go/bin/reviewctl ./cmd/reviewctl \
+    && mkdir -p /srv/download \
+    && CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -mod=vendor -ldflags "$LDFLAGS" -o /srv/download/reviewctl-darwin-arm64      ./cmd/reviewctl \
+    && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -mod=vendor -ldflags "$LDFLAGS" -o /srv/download/reviewctl-darwin-amd64      ./cmd/reviewctl \
+    && CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -mod=vendor -ldflags "$LDFLAGS" -o /srv/download/reviewctl-linux-amd64       ./cmd/reviewctl \
+    && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -mod=vendor -ldflags "$LDFLAGS" -o /srv/download/reviewctl-windows-amd64.exe ./cmd/reviewctl \
+    && (cd /srv/download && sha256sum reviewctl-* > SHA256SUMS)
 
 # Final image
 FROM alpine:latest
@@ -29,6 +36,7 @@ RUN apk --no-cache add ca-certificates tzdata && cp -r -f /usr/share/zoneinfo/$T
 
 COPY --from=builder /go/bin/reviewsrv .
 COPY --from=builder /go/bin/reviewctl .
+COPY --from=builder /srv/download /srv/download
 COPY docs/patches/*.sql /patches/
 
 ENTRYPOINT ["/reviewsrv"]
