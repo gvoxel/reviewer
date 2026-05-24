@@ -206,7 +206,7 @@ func removeReviewArtifacts(dir string, log *slog.Logger) {
 	}
 
 	// Exact-name artifacts.
-	for _, name := range []string{"review.json", "review.html", "codex-output.jsonl", "claude-output.json"} {
+	for _, name := range []string{"review.json", "review.html", "codex-output.jsonl", "claude-output.json", "opencode-output.jsonl"} {
 		path := filepath.Join(dir, name)
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			log.WarnContext(context.Background(), "failed to remove stale artifact", "path", path, "err", err)

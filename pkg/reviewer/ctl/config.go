@@ -7,10 +7,13 @@ type Config struct {
 	Key       string
 	URL       string
 	PublicURL string // browser-facing base URL for links in MR comments; falls back to URL
-	Provider  string // AI provider: "claude" (default) or "codex"
+	Provider  string // AI provider: "claude" (default), "codex", or "opencode"
 	Model     string
 	Dir       string
 	Verbose   bool
+
+	// OpencodeBin overrides the opencode binary path. Empty → use "opencode" on $PATH.
+	OpencodeBin string
 
 	// GitLab MR comment settings.
 	GitLabURL   string
