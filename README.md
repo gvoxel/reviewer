@@ -7,7 +7,7 @@ AI-powered code review platform using Claude. Collects, stores and displays code
 - **Multi-project support** with configurable prompts per project
 - **5 review types**: architecture, code, security, tests, operability
 - **Severity levels**: critical, high, medium, low with traffic light system (red/yellow/green)
-- **reviewctl CLI** — single binary for the full review cycle: prompt fetch, AI review (Claude Code or OpenAI Codex), upload, GitLab MR comments, HTML report
+- **reviewctl CLI** — single binary for the full review cycle: prompt fetch, AI review (Claude Code, OpenAI Codex, or opencode), upload, GitLab MR comments, HTML report
 - **GitLab MR inline comments** — critical and high issues posted directly in the diff with cleanup on re-runs
 - **Session caching** — `--session`/`--continue` flags to reuse Claude prompt cache (~90% token savings)
 - **Auto-migrations** — pgmigrator integrated as Go library, runs SQL patches on server startup
@@ -157,20 +157,22 @@ make build-reviewctl   # Build reviewctl binary
 
 ### AI providers
 
-`reviewctl` supports two providers via `--provider` (env `REVIEW_PROVIDER`, default `claude`):
+`reviewctl` supports three providers via `--provider` (env `REVIEW_PROVIDER`, default `claude`):
 
-| `--provider` | CLI driven         | Model examples                                  | Auth                                            |
-|--------------|--------------------|-------------------------------------------------|-------------------------------------------------|
-| `claude`     | `claude` CLI       | `opus`, `sonnet`, `haiku`, `claude-opus-4-7`    | `claude /login` (Pro/Max) or `ANTHROPIC_API_KEY`|
-| `codex`      | `codex exec` CLI   | `gpt-5.4`, `gpt-5.5`, `gpt-5.4-mini`, `o4-mini` | `codex login` (ChatGPT) or `OPENAI_API_KEY`     |
+| `--provider` | CLI driven                | Model examples                                                   | Auth                                                              |
+|--------------|---------------------------|------------------------------------------------------------------|-------------------------------------------------------------------|
+| `claude`     | `claude` CLI              | `opus`, `sonnet`, `haiku`, `claude-opus-4-7`                     | `claude /login` (Pro/Max) or `ANTHROPIC_API_KEY`                  |
+| `codex`      | `codex exec` CLI          | `gpt-5.4`, `gpt-5.5`, `gpt-5.4-mini`, `o4-mini`                  | `codex login` (ChatGPT) or `OPENAI_API_KEY`                       |
+| `opencode`   | `opencode run` CLI        | `anthropic/claude-sonnet-4-6`, `openai/gpt-5.4-mini`, `opencode/deepseek-v4-flash-free` | `opencode providers login` (per-provider OAuth or API keys)       |
 
-The `--model` value is passed verbatim to the underlying CLI — anything that CLI accepts works. The provider also determines which CLI binary is invoked, so `claude` or `codex` must be on `$PATH`.
+The `--model` value is passed verbatim to the underlying CLI — anything that CLI accepts works. The provider also determines which CLI binary is invoked: `claude` or `codex` must be on `$PATH`; for `opencode` use `--opencode-bin` / `REVIEW_OPENCODE_BIN` to point at a specific binary, otherwise `opencode` is taken from `$PATH`. Note that opencode requires the **`provider/model`** form for `--model`.
 
-`--session` and `--continue` are currently honored by the Claude provider only. Codex accepts the flags for compatibility but logs a warning and runs a fresh session — see `BACKLOG.md`.
+`--session` and `--continue` are honored by Claude and opencode. Codex accepts the flags for compatibility but logs a warning and runs a fresh session — see `BACKLOG.md`.
 
 Cost reporting:
 - For Claude, billing is taken directly from the CLI output (Anthropic's exact per-run cost).
 - For Codex, the CLI does not return cost; reviewctl estimates it from a static price table (see `pkg/reviewer/ctl/pricing.go`). Update the table when OpenAI changes prices.
+- For opencode, billing is taken from the CLI output when present. Subscription-auth runs (e.g. OpenAI OAuth) report `cost=0`; reviewctl falls back to the same static price table.
 
 ## Auto-migrations
 
