@@ -3,10 +3,14 @@ package app
 import (
 	"context"
 	"fmt"
+	"html"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
+	"net/url"
+	"os"
+	"strings"
 
 	"reviewsrv/frontend"
 	"reviewsrv/pkg/rest"
@@ -75,14 +79,70 @@ func (a *App) registerHandlers() {
 
 // registerDownloadHandlers serves static files from cfg.Server.DownloadDir at
 // /download/ — reviewctl release binaries (and SHA256SUMS) that the RS AI
-// Launcher fetches by fixed URL. No-op when DownloadDir is empty.
+// Launcher fetches by fixed URL. The directory root renders a custom listing
+// that shows the build version; individual files are served as-is. No-op when
+// DownloadDir is empty.
 func (a *App) registerDownloadHandlers() {
 	dir := a.cfg.Server.DownloadDir
 	if dir == "" {
 		return
 	}
-	fileServer := http.FileServer(http.Dir(dir))
-	a.echo.GET("/download/*", echo.WrapHandler(http.StripPrefix("/download/", fileServer)))
+	fileServer := http.StripPrefix("/download/", http.FileServer(http.Dir(dir)))
+	a.echo.GET("/download/*", func(c echo.Context) error {
+		if rel := c.Param("*"); rel == "" || rel == "/" {
+			return a.renderDownloadIndex(c, dir)
+		}
+		fileServer.ServeHTTP(c.Response(), c.Request())
+		return nil
+	})
+	a.echo.GET("/download", func(c echo.Context) error {
+		return c.Redirect(http.StatusMovedPermanently, "/download/")
+	})
+}
+
+// renderDownloadIndex renders an HTML listing of dir that shows the build
+// version alongside the available files. Replaces the default http.FileServer
+// directory autoindex so the version is visible.
+func (a *App) renderDownloadIndex(c echo.Context, dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "download directory unavailable")
+	}
+
+	var b strings.Builder
+	b.WriteString("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">")
+	b.WriteString("<title>reviewctl downloads</title></head><body>")
+	fmt.Fprintf(&b, "<h1>reviewctl downloads</h1><p>build version: <strong>%s</strong></p><ul>",
+		html.EscapeString(a.version))
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		size := ""
+		if info, err := e.Info(); err == nil {
+			size = " — " + humanizeBytes(info.Size())
+		}
+		fmt.Fprintf(&b, "<li><a href=\"%s\">%s</a>%s</li>",
+			url.PathEscape(name), html.EscapeString(name), html.EscapeString(size))
+	}
+	b.WriteString("</ul></body></html>")
+
+	return c.HTML(http.StatusOK, b.String())
+}
+
+// humanizeBytes formats a byte count as a short human-readable string.
+func humanizeBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for x := n / unit; x >= unit; x /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 // registerDebugHandlers adds /debug/pprof handlers into a.echo instance.

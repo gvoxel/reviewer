@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/vmkteam/appkit"
@@ -18,7 +19,7 @@ func TestRegisterDownloadHandlers(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	a := &App{echo: appkit.NewEcho()}
+	a := &App{echo: appkit.NewEcho(), version: "v9.9.9"}
 	a.cfg.Server.DownloadDir = dir
 	a.registerDownloadHandlers()
 
@@ -45,6 +46,32 @@ func TestRegisterDownloadHandlers(t *testing.T) {
 				t.Fatalf("body = %q, want %q", rec.Body.String(), tt.wantBody)
 			}
 		})
+	}
+}
+
+func TestRegisterDownloadHandlers_IndexShowsVersion(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "reviewctl-linux-amd64"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	a := &App{echo: appkit.NewEcho(), version: "v0.3.0"}
+	a.cfg.Server.DownloadDir = dir
+	a.registerDownloadHandlers()
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/download/", nil)
+	a.echo.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "v0.3.0") {
+		t.Fatalf("index must show build version, got: %s", body)
+	}
+	if !strings.Contains(body, "reviewctl-linux-amd64") {
+		t.Fatalf("index must list files, got: %s", body)
 	}
 }
 
